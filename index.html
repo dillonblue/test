@@ -337,6 +337,43 @@
     renderRewards();
     renderAchievements();
     checkAchievements();
+    <!-- Confetti 特效（完整內嵌版，不需外部網路） -->
+<script>
+/*
+  Ultra–lightweight confetti system
+*/
+function confetti() {
+  const colors = ["#FFC700", "#FF0000", "#2E3191", "#41BBC7"];
+  const end = Date.now() + 600;
+  
+  (function frame() {
+    const particle = document.createElement("div");
+    particle.style.position = "fixed";
+    particle.style.top = "0px";
+    particle.style.left = Math.random() * window.innerWidth + "px";
+    particle.style.width = "8px";
+    particle.style.height = "8px";
+    particle.style.backgroundColor = colors[Math.floor(Math.random()*colors.length)];
+    particle.style.opacity = "0.8";
+    particle.style.borderRadius = "50%";
+    particle.style.pointerEvents = "none";
+    particle.style.zIndex = "9999";
+    particle.style.transition = "transform 1s, opacity 1s";
+
+    document.body.appendChild(particle);
+
+    requestAnimationFrame(() => {
+      particle.style.transform = `translateY(${window.innerHeight}px) rotate(${Math.random()*360}deg)`;
+      particle.style.opacity = "0";
+    });
+
+    setTimeout(() => particle.remove(), 1000);
+
+    if (Date.now() < end) requestAnimationFrame(frame);
+  })();
+}
+</script>
+
   </script>
 </body>
 </html>
