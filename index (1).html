@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>任務管理遊戲板</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f9fafb;
+      margin: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    #stats {
+      text-align: center;
+      margin-bottom: 16px;
+      font-size: 1rem;
+    }
+    #stats strong {
+      font-size: 1.1rem;
+    }
+    .board {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 12px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .column {
+      background: #eef0f4;
+      border-radius: 10px;
+      padding: 10px;
+      width: 280px;
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      max-height: 80vh;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.15);
+    }
+    .column h2 {
+      font-size: 1.05rem;
+      margin: 0 0 6px;
+      text-align: center;
+    }
+    .card-list {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      margin-bottom: 6px;
+      padding-right: 4px;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 6px;
+      padding: 6px 8px;
+      margin: 5px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+      font-size: 0.9rem;
+    }
+    .card.done {
+      opacity: 0.55;
+      text-decoration: line-through;
+    }
+    .card.redeemed {
+      opacity: 0.6;
+    }
+    .card input[type=checkbox] {
+      margin: 0;
+      flex-shrink: 0;
+      transform: scale(1.1);
+    }
+    .card button.redeem-button {
+      flex-shrink: 0;
+      border-radius: 999px;
+      border: none;
+      padding: 4px 10px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      background: #10b981;
+      color: #fff;
+    }
+    .card button.redeem-button[disabled] {
+      background: #9ca3af;
+      cursor: default;
+    }
+    .card-text {
+      flex: 1 1 auto;
+      word-break: break-word;
+    }
+    .daily-task    { border-left: 4px solid #22c55e; }  /* 綠色: 每日任務 */
+    .challenge-task{ border-left: 4px solid #f97316; }  /* 橙色: 限時挑戰 */
+    .couple-task   { border-left: 4px solid #ec4899; }  /* 粉色: 夫妻互動 */
+    .reward-card   { border-left: 4px solid #a855f7; }  /* 紫色: 獎勵兌換 */
+    .achievement-card { border-left: 4px solid #3b82f6; } /* 藍色: 成就徽章 */
+    .add-task-btn {
+      border-radius: 999px;
+      border: none;
+      background: #e5e7eb;
+      padding: 4px 10px;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .add-task-btn:hover {
+      background: #d1d5db;
+    }
+    @media (max-width: 768px) {
+      body { padding: 10px; }
+      .board {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .column {
+        width: 100%;
+        max-width: 100%;
+        margin: 4px 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>🎯 任務管理遊戲板</h1>
+  <div id="stats">
+    積分：<strong id="points">0</strong>
+    &nbsp;|&nbsp;
+    已兌換獎勵數：<strong id="rewards-count">0</strong>
+    &nbsp;|&nbsp;
+    完成任務數：<strong id="tasks-count">0</strong>
+  </div>
+
+  <div class="board">
+    <div class="column" id="daily">
+      <h2>🌞 每日任務</h2>
+      <div class="card-list"></div>
+      <button class="add-task-btn">＋ 新任務</button>
+    </div>
+
+    <div class="column" id="challenge">
+      <h2>⏰ 限時挑戰</h2>
+      <div class="card-list"></div>
+      <button class="add-task-btn">＋ 新挑戰</button>
+    </div>
+
+    <div class="column" id="couple">
+      <h2>💑 夫妻互動</h2>
+      <div class="card-list"></div>
+      <button class="add-task-btn">＋ 新互動任務</button>
+    </div>
+
+    <div class="column" id="rewards">
+      <h2>🎁 獎勵兌換</h2>
+      <div class="card-list"></div>
+    </div>
+
+    <div class="column" id="achievements">
+      <h2>🏅 成就徽章</h2>
+      <div class="card-list"></div>
+    </div>
+  </div>
+
+  <script>
+    const defaultData = {
+      points: 0,
+      tasksCompleted: 0,
+      challengeCompletedCount: 0,
+      tasks: {
+        daily: [
+          { text: "📧 檢查郵件信箱", completed: false, points: 5 },
+          { text: "📦 今日出貨處理", completed: false, points: 10 },
+          { text: "🧾 對帳 / 記帳更新", completed: false, points: 5 }
+        ],
+        challenge: [
+          { text: "🔥 3日內完成一個『一直想做、都還沒做』的任務", completed: false, points: 20 }
+        ],
+        couple: [
+          { text: "💬 今天主動跟另一半說一件感謝的事", completed: false, points: 5 },
+          { text: "🤝 本週一起完成一件家務合作任務", completed: false, points: 10 }
+        ]
+      },
+      rewards: [
+        { text: "☕ 咖啡一杯", cost: 20, redeemed: false },
+        { text: "🍰 下午茶約會", cost: 40, redeemed: false },
+        { text: "🕒 提早下班一小時", cost: 60, redeemed: false }
+      ],
+      achievements: [],
+      achievementsUnlocked: {}
+    };
+
+    let saved = localStorage.getItem("gamifiedTaskBoardData");
+    let data = saved ? JSON.parse(saved) : defaultData;
+
+    function saveData() {
+      localStorage.setItem("gamifiedTaskBoardData", JSON.stringify(data));
+    }
+
+    function updateStats() {
+      document.getElementById("points").innerText = data.points;
+      document.getElementById("tasks-count").innerText = data.tasksCompleted;
+      const redeemedCount = data.rewards.filter(r => r.redeemed).length;
+      document.getElementById("rewards-count").innerText = redeemedCount;
+    }
+
+    function renderTasks() {
+      for (let type in data.tasks) {
+        const listElem = document.querySelector("#" + type + " .card-list");
+        listElem.innerHTML = "";
+        data.tasks[type].forEach((task, index) => {
+          const card = document.createElement("div");
+          card.className = "card " + type + "-task";
+          if (task.completed) {
+            card.classList.add("done");
+          }
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.checked = task.completed;
+          if (task.completed) checkbox.disabled = true;
+          checkbox.addEventListener("change", () => {
+            if (checkbox.checked && !task.completed) {
+              task.completed = true;
+              card.classList.add("done");
+              checkbox.disabled = true;
+              data.points += task.points;
+              data.tasksCompleted += 1;
+              if (type === "challenge") {
+                data.challengeCompletedCount += 1;
+              }
+              updateStats();
+              checkAchievements();
+              saveData();
+            }
+          });
+          const span = document.createElement("span");
+          span.className = "card-text";
+          span.textContent = task.text + "  (+" + task.points + " 分)";
+          card.appendChild(checkbox);
+          card.appendChild(span);
+          listElem.appendChild(card);
+        });
+      }
+    }
+
+    function renderRewards() {
+      const listElem = document.querySelector("#rewards .card-list");
+      listElem.innerHTML = "";
+      data.rewards.forEach((reward, index) => {
+        const card = document.createElement("div");
+        card.className = "card reward-card";
+        if (reward.redeemed) card.classList.add("redeemed");
+        const btn = document.createElement("button");
+        btn.className = "redeem-button";
+        btn.textContent = reward.redeemed ? "已兌換" : "兌換";
+        if (reward.redeemed) btn.disabled = true;
+        btn.addEventListener("click", () => {
+          if (reward.redeemed) return;
+          if (data.points >= reward.cost) {
+            data.points -= reward.cost;
+            reward.redeemed = true;
+            btn.textContent = "已兌換";
+            btn.disabled = true;
+            card.classList.add("redeemed");
+            updateStats();
+            checkAchievements();
+            saveData();
+          } else {
+            alert("積分不夠，無法兌換這個獎勵！");
+          }
+        });
+        const span = document.createElement("span");
+        span.className = "card-text";
+        span.textContent = reward.text + "（" + reward.cost + " 分）";
+        card.appendChild(btn);
+        card.appendChild(span);
+        listElem.appendChild(card);
+      });
+    }
+
+    function renderAchievements() {
+      const listElem = document.querySelector("#achievements .card-list");
+      listElem.innerHTML = "";
+      data.achievements.forEach(ach => {
+        const card = document.createElement("div");
+        card.className = "card achievement-card";
+        const span = document.createElement("span");
+        span.className = "card-text";
+        span.textContent = "🏅 " + ach.text;
+        card.appendChild(span);
+        listElem.appendChild(card);
+      });
+    }
+
+    const achievementConditions = [
+      { id: "5tasks", text: "累積完成 5 項任務！", check: () => data.tasksCompleted >= 5 },
+      { id: "10tasks", text: "累積完成 10 項任務！", check: () => data.tasksCompleted >= 10 },
+      { id: "3challenges", text: "完成 3 個限時挑戰！", check: () => data.challengeCompletedCount >= 3 }
+    ];
+
+    function checkAchievements() {
+      let unlockedAnything = false;
+      achievementConditions.forEach(ach => {
+        if (!data.achievementsUnlocked[ach.id] && ach.check()) {
+          data.achievementsUnlocked[ach.id] = true;
+          data.achievements.push({ id: ach.id, text: ach.text });
+          alert("成就解鎖：" + ach.text);
+          unlockedAnything = true;
+        }
+      });
+      if (unlockedAnything) {
+        renderAchievements();
+        saveData();
+      }
+    }
+
+    document.querySelectorAll(".add-task-btn").forEach(button => {
+      button.addEventListener("click", () => {
+        const colElem = button.parentElement;
+        const type = colElem.id;
+        const title = prompt("請輸入新任務名稱：");
+        if (!title) return;
+        const ptsStr = prompt("請設定此任務的積分：", "5");
+        const pts = Number(ptsStr) || 0;
+        data.tasks[type].push({ text: title, completed: false, points: pts });
+        renderTasks();
+        saveData();
+      });
+    });
+
+    updateStats();
+    renderTasks();
+    renderRewards();
+    renderAchievements();
+    checkAchievements();
+  </script>
+</body>
+</html>
